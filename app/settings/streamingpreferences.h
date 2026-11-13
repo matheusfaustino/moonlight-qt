@@ -192,6 +192,7 @@ public:
     AudioConfig audioConfig;
     VideoCodecConfig videoCodecConfig;
     bool enableHdr;
+    QString multilinkSecondary; // CLI-only, not persisted
     bool enableYUV444;
     VideoDecoderSelection videoDecoderSelection;
     WindowMode windowMode;

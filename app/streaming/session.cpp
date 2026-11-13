@@ -1720,6 +1720,10 @@ bool Session::startConnectionAsync()
                                                                          false);
     }
 
+    // Cleared when unset so a previous session's value can't leak into this one
+    LiSetMultilinkSecondary(m_Preferences->multilinkSecondary.isEmpty() ? nullptr :
+                            qPrintable(m_Preferences->multilinkSecondary));
+
     int err = LiStartConnection(&hostInfo, &m_StreamConfig, &k_ConnCallbacks,
                                 &m_VideoCallbacks, &m_AudioCallbacks,
                                 NULL, 0, NULL, 0);

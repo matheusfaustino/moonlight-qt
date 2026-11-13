@@ -369,6 +369,7 @@ void StreamCommandLineParser::parse(const QStringList &args, StreamingPreference
     parser.addToggleOption("hdr", "HDR streaming");
     parser.addToggleOption("yuv444", "YUV 4:4:4 sampling, if supported");
     parser.addChoiceOption("capture-system-keys", "capture system key combos", m_CaptureSysKeysModeMap.keys());
+    parser.addValueOption("multilink-secondary", "second interface (IPv4 address or name) for redundant video");
     parser.addChoiceOption("video-codec", "video codec", m_VideoCodecMap.keys());
     parser.addChoiceOption("video-decoder", "video decoder", m_VideoDecoderMap.keys());
 
@@ -494,6 +495,11 @@ void StreamCommandLineParser::parse(const QStringList &args, StreamingPreference
     // Resolve --capture-system-keys option
     if (parser.isSet("capture-system-keys")) {
         preferences->captureSysKeysMode = mapValue(m_CaptureSysKeysModeMap, parser.getChoiceOptionValue("capture-system-keys"));
+    }
+
+    // Resolve --multilink-secondary option
+    if (parser.isSet("multilink-secondary")) {
+        preferences->multilinkSecondary = parser.value("multilink-secondary");
     }
 
     // Resolve --video-codec option
