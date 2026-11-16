@@ -33,12 +33,16 @@ jobs:
       ci_version: ${{ needs.setup.outputs.ci_version }}
 
   build-steamlink:
+    # Disabled on this fork branch: only the SteamOS AppImage is used for the multilink tests. Re-enable before upstreaming.
+    if: false
     needs: setup
     uses: ./.github/workflows/build-steamlink.yml
     with:
       ci_version: ${{ needs.setup.outputs.ci_version }}
 
   build-windows-macos:
+    # Disabled on this fork branch: only the SteamOS AppImage is used for the multilink tests. Re-enable before upstreaming.
+    if: false
     needs: setup
     uses: ./.github/workflows/build-win-mac.yml
     with:
