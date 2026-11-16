@@ -54,6 +54,8 @@ private:
 
     void logVideoStats(VIDEO_STATS& stats, const char* title);
 
+    void logPeriodicStats();
+
     void addVideoStats(VIDEO_STATS& src, VIDEO_STATS& dst);
 
     bool createFrontendRenderer(PDECODER_PARAMETERS params, bool useAlternateFrontend);
@@ -117,6 +119,8 @@ private:
     VIDEO_STATS m_ActiveWndVideoStats;
     VIDEO_STATS m_LastWndVideoStats;
     VIDEO_STATS m_GlobalVideoStats;
+    VIDEO_STATS m_StatsLogWnd;
+    int m_StatsLogEnabled; // -1 until decided on the first stats window
     std::set<IFFmpegRenderer::RendererType> m_FailedRenderers;
 
     int m_FramesIn;

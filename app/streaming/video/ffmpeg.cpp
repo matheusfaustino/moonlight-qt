@@ -249,6 +249,8 @@ FFmpegVideoDecoder::FFmpegVideoDecoder(bool testOnly)
     SDL_zero(m_ActiveWndVideoStats);
     SDL_zero(m_LastWndVideoStats);
     SDL_zero(m_GlobalVideoStats);
+    SDL_zero(m_StatsLogWnd);
+    m_StatsLogEnabled = -1;
 
     SDL_AtomicSet(&m_DecoderThreadShouldQuit, 0);
 }
@@ -981,6 +983,49 @@ void FFmpegVideoDecoder::logVideoStats(VIDEO_STATS& stats, const char* title)
                     "\n%s\n------------------\n%s",
                     title, videoStatsStr);
     }
+}
+
+// One-line periodic stats with the overlay's fields, for log-based test harnesses.
+// Opt-in so stock logs are unchanged: MOONLIGHT_STATS_LOG=1 or a multilink secondary.
+void FFmpegVideoDecoder::logPeriodicStats()
+{
+    if (m_StatsLogEnabled < 0) {
+        m_StatsLogEnabled = qgetenv("MOONLIGHT_STATS_LOG") == "1" ||
+                            (Session::get() != nullptr && Session::get()->isMultilinkConfigured());
+    }
+    if (!m_StatsLogEnabled) {
+        return;
+    }
+
+    addVideoStats(m_ActiveWndVideoStats, m_StatsLogWnd);
+    uint64_t wndUs = LiGetMicroseconds() - m_StatsLogWnd.measurementStartUs;
+    if (wndUs < 5000000) {
+        return;
+    }
+
+    VIDEO_STATS& s = m_StatsLogWnd;
+    auto pct = [](uint32_t n, uint32_t d) { return d ? 100.0 * n / d : 0.0; };
+    auto avgMs = [](uint64_t us, uint32_t n) { return n ? us / 1000.0 / n : 0.0; };
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "stats: wnd_s=%.1f res=%dx%d fps_total=%.2f fps_in=%.2f fps_dec=%.2f fps_render=%.2f "
+                "frames=%u frames_in=%u frames_dec=%u frames_render=%u "
+                "net_drop=%u net_drop_pct=%.2f jitter_drop=%u jitter_drop_pct=%.2f "
+                "host_lat_ms_min=%.1f host_lat_ms_max=%.1f host_lat_ms_avg=%.1f "
+                "rtt_ms=%u rtt_var_ms=%u decode_ms=%.2f queue_ms=%.2f render_ms=%.2f reassembly_ms=%.2f "
+                "mbps_avg=%.1f mbps_peak=%.1f",
+                wndUs / 1000000.0,
+                m_VideoDecoderCtx ? m_VideoDecoderCtx->width : 0, m_VideoDecoderCtx ? m_VideoDecoderCtx->height : 0,
+                s.totalFps, s.receivedFps, s.decodedFps, s.renderedFps,
+                s.totalFrames, s.receivedFrames, s.decodedFrames, s.renderedFrames,
+                s.networkDroppedFrames, pct(s.networkDroppedFrames, s.totalFrames),
+                s.pacerDroppedFrames, pct(s.pacerDroppedFrames, s.decodedFrames),
+                s.minHostProcessingLatency / 10.0, s.maxHostProcessingLatency / 10.0,
+                s.framesWithHostProcessingLatency ? s.totalHostProcessingLatency / 10.0 / s.framesWithHostProcessingLatency : 0.0,
+                s.lastRtt, s.lastRttVariance,
+                avgMs(s.totalDecodeTimeUs, s.decodedFrames), avgMs(s.totalPacerTimeUs, s.renderedFrames),
+                avgMs(s.totalRenderTimeUs, s.renderedFrames), avgMs(s.totalReassemblyTimeUs, s.receivedFrames),
+                m_BwTracker.GetAverageMbps(), m_BwTracker.GetPeakMbps());
+    SDL_zero(m_StatsLogWnd);
 }
 
 IFFmpegRenderer* FFmpegVideoDecoder::createHwAccelRenderer(const AVCodecHWConfig* hwDecodeCfg, PDECODER_PARAMETERS params, int pass)
@@ -2150,6 +2195,7 @@ int FFmpegVideoDecoder::submitDecodeUnit(PDECODE_UNIT du)
 
         // Accumulate these values into the global stats
         addVideoStats(m_ActiveWndVideoStats, m_GlobalVideoStats);
+        logPeriodicStats();
 
         // Move this window into the last window slot and clear it for next window
         SDL_memcpy(&m_LastWndVideoStats, &m_ActiveWndVideoStats, sizeof(m_ActiveWndVideoStats));

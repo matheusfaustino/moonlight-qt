@@ -116,6 +116,11 @@ public:
         return s_ActiveSession;
     }
 
+    bool isMultilinkConfigured() const
+    {
+        return !m_Preferences->multilinkSecondary.isEmpty();
+    }
+
     Overlay::OverlayManager& getOverlayManager()
     {
         return m_OverlayManager;
